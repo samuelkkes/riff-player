@@ -20,6 +20,8 @@ export interface LyricsLine {
 
 export interface LyricsResult {
   source: string
+  /** True when lines carry real timestamps (line- or word-synced). */
+  synced: boolean
   /** True when at least one line has per-word timing. */
   wordSynced: boolean
   lines: LyricsLine[]
@@ -105,5 +107,8 @@ export function parseKPoeLyrics(payload: unknown): LyricsResult | null {
   }
 
   if (lines.length === 0) return null
-  return { source, wordSynced, lines }
+  // Some sources return plain text with every timestamp at 0 — treat that as
+  // unsynced so the view doesn't try to track a "current" line.
+  const synced = lines.some((l) => l.startMs > 0)
+  return { source, synced, wordSynced, lines }
 }

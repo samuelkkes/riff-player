@@ -27,9 +27,9 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
         delay: Math.min(index * 0.03, 0.3),
         ease: "easeOut",
       }}
-      onDoubleClick={() => playTrack(track.id)}
+      onClick={() => playTrack(track.id)}
       className={cn(
-        "group hover:bg-accent flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors",
+        "group hover:bg-accent flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors",
         isCurrent && "bg-accent"
       )}
     >
@@ -49,7 +49,10 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
             size="icon"
             variant="ghost"
             className="size-6"
-            onClick={() => playTrack(track.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              playTrack(track.id)
+            }}
             aria-label={`Play ${track.title}`}
           >
             <PlayIcon weight="fill" />
@@ -59,7 +62,10 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
             size="icon"
             variant="ghost"
             className="hidden size-6 group-hover:flex"
-            onClick={() => playTrack(track.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              playTrack(track.id)
+            }}
             aria-label={`Play ${track.title}`}
           >
             <PlayIcon weight="fill" />
@@ -92,8 +98,11 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
       <Button
         size="icon"
         variant="ghost"
-        className="text-muted-foreground hover:text-destructive size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-        onClick={() => removeTrack(track.id)}
+        className="text-muted-foreground hover:text-destructive size-7 shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+        onClick={(e) => {
+          e.stopPropagation()
+          removeTrack(track.id)
+        }}
         aria-label={`Remove ${track.title}`}
       >
         <TrashIcon />

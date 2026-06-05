@@ -54,7 +54,26 @@ export function PlayerBar() {
 
   return (
     <footer className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-t backdrop-blur">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 md:grid-cols-[1fr_2fr_1fr]">
+      {/* Mobile seek bar (full width, on top) */}
+      <div className="flex items-center gap-2 px-3 pt-2 md:hidden">
+        <span className="text-muted-foreground w-9 text-right text-[11px] tabular-nums">
+          {formatTime(currentTime)}
+        </span>
+        <Slider
+          value={[currentTime]}
+          max={duration || 0}
+          step={1}
+          disabled={!currentTrack}
+          onValueChange={([v]) => seek(v)}
+          aria-label="Seek"
+          className="flex-1"
+        />
+        <span className="text-muted-foreground w-9 text-[11px] tabular-nums">
+          {formatTime(duration)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2 md:grid-cols-[1fr_2fr_1fr] md:gap-4 md:px-4 md:py-3">
         {/* Now playing */}
         <div className="flex min-w-0 items-center gap-3">
           <motion.div
@@ -100,7 +119,7 @@ export function PlayerBar() {
                   variant="ghost"
                   onClick={toggleShuffle}
                   aria-pressed={shuffle}
-                  className={cn(shuffle && "text-primary")}
+                  className={cn("hidden md:inline-flex", shuffle && "text-primary")}
                 >
                   <ShuffleIcon />
                 </Button>
@@ -165,7 +184,10 @@ export function PlayerBar() {
                   variant="ghost"
                   onClick={cycleRepeat}
                   aria-pressed={repeat !== "off"}
-                  className={cn(repeat !== "off" && "text-primary")}
+                  className={cn(
+                    "hidden md:inline-flex",
+                    repeat !== "off" && "text-primary"
+                  )}
                 >
                   {repeat === "one" ? <RepeatOnceIcon /> : <RepeatIcon />}
                 </Button>
@@ -180,7 +202,7 @@ export function PlayerBar() {
             </Tooltip>
           </div>
 
-          <div className="flex w-full items-center gap-2">
+          <div className="hidden w-full items-center gap-2 md:flex">
             <span className="text-muted-foreground w-10 text-right text-xs tabular-nums">
               {formatTime(currentTime)}
             </span>
@@ -200,7 +222,7 @@ export function PlayerBar() {
         </div>
 
         {/* Volume */}
-        <div className="flex items-center justify-end gap-2">
+        <div className="hidden items-center justify-end gap-2 md:flex">
           <Button
             size="icon"
             variant="ghost"

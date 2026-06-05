@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { AnimatePresence, motion } from "motion/react"
 import {
+  CrosshairSimpleIcon,
   MicrophoneStageIcon,
   SpinnerGapIcon,
   WarningCircleIcon,
@@ -30,8 +32,10 @@ const LineRow = React.memo(function LineRow({
   index,
   active,
   wordSynced,
-  distance,
-  reduceMotion,
+  seekable,
+  blurPx,
+  opacity,
+  shrink,
   nowMs,
   onSeek,
 }: {
@@ -39,32 +43,25 @@ const LineRow = React.memo(function LineRow({
   index: number
   active: boolean
   wordSynced: boolean
-  /** Distance from the active line (0 = active). -1 means nothing is active yet. */
-  distance: number
-  reduceMotion: boolean
+  seekable: boolean
+  blurPx: number
+  opacity: number
+  shrink: boolean
   nowMs: number
   onSeek: (seconds: number) => void
 }) {
-  const blur =
-    reduceMotion || distance <= 0 ? 0 : Math.min(distance * BLUR_PER_LINE, MAX_BLUR)
-  const opacity = active
-    ? 1
-    : distance < 0
-      ? 0.5
-      : Math.max(0.22, 0.55 - (distance - 1) * 0.08)
-
   return (
     <button
       type="button"
       data-line={index}
-      onClick={() => onSeek(line.startMs / 1000)}
-      style={{
-        filter: blur ? `blur(${blur}px)` : undefined,
-        opacity,
-      }}
+      disabled={!seekable}
+      onClick={() => seekable && onSeek(line.startMs / 1000)}
+      style={{ filter: blurPx ? `blur(${blurPx}px)` : undefined, opacity }}
       className={cn(
         "block w-full origin-left text-left text-2xl leading-snug font-semibold text-balance transition-all duration-500 ease-out will-change-[filter,opacity,transform] sm:text-3xl",
-        active ? "scale-100" : "scale-[0.97] hover:!opacity-80 hover:!blur-none",
+        shrink ? "scale-[0.97]" : "scale-100",
+        seekable && "hover:!opacity-100 hover:!blur-none",
+        !seekable && "cursor-default",
         "motion-reduce:transition-none"
       )}
     >
@@ -121,8 +118,42 @@ export function LyricsView() {
   const reduceMotion = usePrefersReducedMotion()
 
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const userScrolledAt = React.useRef(0)
+  // Guards scroll events fired by our own auto-scroll so they aren't mistaken
+  // for the user scrolling.
+  const programmatic = React.useRef(false)
+  const programmaticTimer = React.useRef(0)
   const [nowMs, setNowMs] = React.useState(0)
+  // True once the user scrolls away from the focused line (synced lyrics only).
+  const [browsing, setBrowsing] = React.useState(false)
+
+  const synced = result?.synced ?? false
+  const lines = result?.lines
+
+  // Scroll a line to the vertical center of the container only (never ancestors).
+  const scrollToIndex = React.useCallback(
+    (index: number, behavior: ScrollBehavior) => {
+      const container = containerRef.current
+      if (!container || index < 0) return
+      const el = container.querySelector<HTMLElement>(`[data-line="${index}"]`)
+      if (!el) return
+      const cRect = container.getBoundingClientRect()
+      const eRect = el.getBoundingClientRect()
+      const top =
+        container.scrollTop +
+        (eRect.top - cRect.top) -
+        (container.clientHeight - eRect.height) / 2
+      programmatic.current = true
+      container.scrollTo({ top, behavior })
+      window.clearTimeout(programmaticTimer.current)
+      programmaticTimer.current = window.setTimeout(
+        () => {
+          programmatic.current = false
+        },
+        behavior === "smooth" ? 600 : 50
+      )
+    },
+    []
+  )
 
   // Track the live position: rAF while playing, single sync otherwise.
   React.useEffect(() => {
@@ -140,29 +171,37 @@ export function LyricsView() {
     return () => cancelAnimationFrame(raf)
   }, [isPlaying, getCurrentTime, currentTime])
 
-  const lines = result?.lines
+  // Reset browsing mode whenever the track changes.
+  React.useEffect(() => {
+    const reset = () => setBrowsing(false)
+    reset()
+  }, [currentTrack?.id])
+
   const activeIndex = React.useMemo(() => {
-    if (!lines) return -1
+    if (!lines || !synced) return -1
     let idx = -1
     for (let i = 0; i < lines.length; i += 1) {
       if (lines[i].startMs <= nowMs) idx = i
       else break
     }
     return idx
-  }, [lines, nowMs])
+  }, [lines, synced, nowMs])
 
-  // Auto-scroll the active line to the center, unless the user just scrolled.
+  // Auto-scroll the active line to center — only while focused (not browsing).
   React.useEffect(() => {
-    if (activeIndex < 0) return
-    if (Date.now() - userScrolledAt.current < 4000) return
-    const el = containerRef.current?.querySelector<HTMLElement>(
-      `[data-line="${activeIndex}"]`
-    )
-    el?.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "center",
-    })
-  }, [activeIndex, reduceMotion])
+    if (browsing || activeIndex < 0) return
+    scrollToIndex(activeIndex, reduceMotion ? "auto" : "smooth")
+  }, [activeIndex, browsing, reduceMotion, scrollToIndex])
+
+  const refocus = React.useCallback(() => {
+    setBrowsing(false)
+    scrollToIndex(activeIndex, reduceMotion ? "auto" : "smooth")
+  }, [activeIndex, reduceMotion, scrollToIndex])
+
+  // Any scroll the user initiates (touch, wheel, drag) enters browsing mode.
+  const onScroll = React.useCallback(() => {
+    if (synced && !programmatic.current) setBrowsing(true)
+  }, [synced])
 
   if (!currentTrack) {
     return (
@@ -195,7 +234,7 @@ export function LyricsView() {
     )
   }
 
-  if (status === "empty" || !lines) {
+  if (status === "empty" || !lines || !result) {
     return (
       <CenteredEmpty
         icon={<MicrophoneStageIcon />}
@@ -205,31 +244,84 @@ export function LyricsView() {
     )
   }
 
+  const focusMode = synced && !browsing
+  const showRefocus = synced && browsing && activeIndex >= 0
+
   return (
-    <div
-      ref={containerRef}
-      onWheel={() => (userScrolledAt.current = Date.now())}
-      onTouchMove={() => (userScrolledAt.current = Date.now())}
-      className="no-scrollbar h-full overflow-y-auto px-6 py-[45%]"
-    >
-      <div className="mx-auto flex max-w-2xl flex-col gap-5">
-        {lines.map((line, i) => (
-          <LineRow
-            key={i}
-            line={line}
-            index={i}
-            active={i === activeIndex}
-            wordSynced={result.wordSynced}
-            distance={activeIndex < 0 ? -1 : Math.abs(i - activeIndex)}
-            reduceMotion={reduceMotion}
-            nowMs={i === activeIndex ? nowMs : 0}
-            onSeek={seek}
-          />
-        ))}
-        <p className="text-muted-foreground pt-8 text-center text-xs">
-          Lyrics via {result.source} · LyricsPlus (KPoe)
-        </p>
+    <div className="relative h-full">
+      <div
+        ref={containerRef}
+        onScroll={onScroll}
+        className={cn(
+          "no-scrollbar h-full overflow-y-auto overscroll-contain px-6",
+          synced ? "py-[40vh]" : "py-10"
+        )}
+      >
+        <div className="mx-auto flex max-w-2xl flex-col gap-5">
+          {lines.map((line, i) => {
+            const active = i === activeIndex
+            let blurPx = 0
+            let opacity = 1
+            let shrink = false
+
+            if (focusMode) {
+              const distance = activeIndex < 0 ? -1 : Math.abs(i - activeIndex)
+              blurPx =
+                reduceMotion || distance <= 0
+                  ? 0
+                  : Math.min(distance * BLUR_PER_LINE, MAX_BLUR)
+              opacity = active
+                ? 1
+                : distance < 0
+                  ? 0.5
+                  : Math.max(0.22, 0.55 - (distance - 1) * 0.08)
+              shrink = distance > 0
+            } else if (synced) {
+              // Browsing synced lyrics: crisp and readable, light dim on others.
+              opacity = active ? 1 : 0.7
+            }
+
+            return (
+              <LineRow
+                key={i}
+                line={line}
+                index={i}
+                active={active}
+                wordSynced={result.wordSynced}
+                seekable={synced}
+                blurPx={blurPx}
+                opacity={opacity}
+                shrink={shrink}
+                nowMs={active ? nowMs : 0}
+                onSeek={seek}
+              />
+            )
+          })}
+          <p className="text-muted-foreground pt-8 text-center text-xs">
+            Lyrics via {result.source} · LyricsPlus (KPoe)
+            {!synced && " · unsynced"}
+          </p>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showRefocus && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+            <motion.button
+              type="button"
+              onClick={refocus}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="bg-primary text-primary-foreground pointer-events-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg"
+            >
+              <CrosshairSimpleIcon weight="bold" />
+              Refocus
+            </motion.button>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

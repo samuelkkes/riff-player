@@ -30,7 +30,7 @@ export function LyricsDrawer({
         className={cn(
           "flex flex-col gap-0 p-0",
           isMobile
-            ? "h-[88vh] rounded-t-2xl"
+            ? "data-[side=bottom]:h-[88vh] rounded-t-2xl"
             : "w-full data-[side=right]:sm:max-w-xl data-[side=right]:lg:max-w-2xl data-[side=right]:xl:max-w-3xl"
         )}
       >

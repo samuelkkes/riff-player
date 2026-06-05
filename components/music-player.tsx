@@ -73,16 +73,16 @@ export function MusicPlayer() {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between gap-4 border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-md">
+      <header className="flex items-center justify-between gap-2 border-b px-3 py-3 sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
             <WaveformIcon className="size-5" weight="fill" />
           </div>
-          <div>
-            <h1 className="font-heading text-lg leading-none font-semibold">
+          <div className="min-w-0">
+            <h1 className="font-heading truncate text-lg leading-none font-semibold">
               Riff
             </h1>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground truncate text-xs">
               {tracks.length > 0
                 ? `${tracks.length} track${tracks.length > 1 ? "s" : ""}${
                     loadingCount > 0 ? " · reading tags…" : ""
@@ -91,7 +91,7 @@ export function MusicPlayer() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {tracks.length > 0 && (
             <>
               <Button
@@ -99,20 +99,32 @@ export function MusicPlayer() {
                 size="sm"
                 onClick={() => setShowLyrics((v) => !v)}
                 aria-pressed={showLyrics}
-                className={cn(showLyrics && "text-primary")}
+                aria-label="Lyrics"
+                className={cn("max-sm:px-2", showLyrics && "text-primary")}
               >
-                <MicrophoneStageIcon data-icon="inline-start" />
-                Lyrics
+                <MicrophoneStageIcon className="sm:-ms-1" />
+                <span className="hidden sm:inline">Lyrics</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={clear}>
-                <TrashIcon data-icon="inline-start" />
-                Clear
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clear}
+                aria-label="Clear library"
+                className="max-sm:px-2"
+              >
+                <TrashIcon className="sm:-ms-1" />
+                <span className="hidden sm:inline">Clear</span>
               </Button>
             </>
           )}
-          <Button size="sm" onClick={openPicker}>
-            <FolderOpenIcon data-icon="inline-start" />
-            Add music
+          <Button
+            size="sm"
+            onClick={openPicker}
+            aria-label="Add music"
+            className="max-sm:px-2"
+          >
+            <FolderOpenIcon className="sm:-ms-1" />
+            <span className="hidden sm:inline">Add music</span>
           </Button>
           <SettingsDialog />
         </div>
