@@ -119,6 +119,7 @@ export function PlayerBar() {
                   variant="ghost"
                   onClick={toggleShuffle}
                   aria-pressed={shuffle}
+                  aria-label="Shuffle"
                   className={cn("hidden md:inline-flex", shuffle && "text-primary")}
                 >
                   <ShuffleIcon />
@@ -184,6 +185,7 @@ export function PlayerBar() {
                   variant="ghost"
                   onClick={cycleRepeat}
                   aria-pressed={repeat !== "off"}
+                  aria-label={`Repeat: ${repeat}`}
                   className={cn(
                     "hidden md:inline-flex",
                     repeat !== "off" && "text-primary"
