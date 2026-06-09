@@ -143,6 +143,27 @@ export function SettingsDialog() {
             </div>
           </Field>
         </FieldGroup>
+
+        <div className="border-border/60 mt-2 flex items-center gap-3 border-t pt-4">
+          <img
+            src="https://github.com/samuelkkes.png"
+            alt="Samuel Eli Kougbam"
+            width={32}
+            height={32}
+            className="border-border size-8 rounded-full border"
+          />
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Created by</span>
+            <a
+              href="https://github.com/samuelkkes"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-medium hover:underline"
+            >
+              Samuel Eli Kougbam
+            </a>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )
